@@ -38,12 +38,12 @@ abstract class Model
 	protected int FMX, FMY, T;
 	protected bool periodic;
 
-	protected double[] weights;
-	double[] weightLogWeights;
+	protected float[] weights;
+	float[] weightLogWeights;
 
 	int[] sumsOfOnes;
-	double sumOfWeights, sumOfWeightLogWeights, startingEntropy;
-	double[] sumsOfWeights, sumsOfWeightLogWeights, entropies;
+	float sumOfWeights, sumOfWeightLogWeights, startingEntropy;
+	float[] sumsOfWeights, sumsOfWeightLogWeights, entropies;
 
 	Priority_Queue.FastPriorityQueue<PQNode> m_pq;
 	PQNode[] m_nodes;
@@ -66,23 +66,23 @@ abstract class Model
 				compatible[i][t] = new int[4];
 		}
 
-		weightLogWeights = new double[T];
+		weightLogWeights = new float[T];
 		sumOfWeights = 0;
 		sumOfWeightLogWeights = 0;
 
 		for( int t = 0; t < T; t++ )
 		{
-			weightLogWeights[t] = weights[t] * Math.Log( weights[t] );
+			weightLogWeights[t] = weights[t] * (float)Math.Log( weights[t] );
 			sumOfWeights += weights[t];
 			sumOfWeightLogWeights += weightLogWeights[t];
 		}
 
-		startingEntropy = Math.Log( sumOfWeights ) - sumOfWeightLogWeights / sumOfWeights;
+		startingEntropy = (float)Math.Log( sumOfWeights ) - sumOfWeightLogWeights / sumOfWeights;
 
 		sumsOfOnes = new int[FMX * FMY];
-		sumsOfWeights = new double[FMX * FMY];
-		sumsOfWeightLogWeights = new double[FMX * FMY];
-		entropies = new double[FMX * FMY];
+		sumsOfWeights = new float[FMX * FMY];
+		sumsOfWeightLogWeights = new float[FMX * FMY];
+		entropies = new float[FMX * FMY];
 
 		//stack = new (int, int)[wave.Length * T];
 		stacksize = 0;
@@ -93,7 +93,7 @@ abstract class Model
 
 	bool? Observe()
 	{
-		//double min = 1E+3;
+		//float min = 1E+3;
 		int argmin = -1;
 
 		/*
@@ -106,10 +106,10 @@ abstract class Model
 			if( amount == 0 )
 				return false;
 
-			double entropy = entropies[i];
+			float entropy = entropies[i];
 			if( amount > 1 && entropy <= min )
 			{
-				double noise = 1E-6 * random.NextDouble();
+				float noise = 1E-6 * random.Nextfloat();
 				if( entropy + noise < min )
 				{
 					min = entropy + noise;
@@ -129,20 +129,10 @@ abstract class Model
 		if( m_pq.Count % 5000 == 0 )
 			Console.WriteLine( $"Nodes left = {m_pq.Count}" );
 
-		if( argmin == -1 )
-		{
-			observed = new int[FMX * FMY];
-			for( int i = 0; i < wave.Length; i++ )
-				for( int t = 0; t < T; t++ )
-					if( wave[i][t] )
-					{ observed[i] = t; break; }
-			return true;
-		}
-
-		double[] distribution = new double[T];
+		float[] distribution = new float[T];
 		for( int t = 0; t < T; t++ )
 			distribution[t] = wave[argmin][t] ? weights[t] : 0;
-		int r = distribution.Random(random.NextDouble());
+		int r = distribution.Random((float)random.NextDouble());
 
 		bool[] w = wave[argmin];
 		for( int t = 0; t < T; t++ )
@@ -156,6 +146,7 @@ abstract class Model
 					var last = m_bans.Last;
 
 					Unban( last.Value.i, last.Value.t, last.Value.comp );
+
 				}
 			}
 		}
@@ -210,6 +201,8 @@ abstract class Model
 							var last = m_bans.Last.Value;
 
 							Unban( last.i, last.t, last.comp );
+
+							m_bans.RemoveLast();
 						}
 					}
 				}
@@ -240,15 +233,15 @@ abstract class Model
 	{
 
 		if( m_nodes[i].removed ) 
-			return sumsOfOnes[i];
+			return sumsOfOnes[i] - 1;
 
 		int[] comp = compatible[i][t];
 
 		var compClone = (int[])comp.Clone();
 
-		m_bans.AddFirst( (i, t, compClone) );
+		m_bans.AddLast( (i, t, compClone) );
 
-		if( m_bans.Count > 16 ) m_bans.RemoveFirst();
+		if( m_bans.Count > 1024 ) m_bans.RemoveFirst();
 
 		wave[i][t] = false;
 
@@ -260,8 +253,8 @@ abstract class Model
 		sumsOfWeights[i] -= weights[t];
 		sumsOfWeightLogWeights[i] -= weightLogWeights[t];
 
-		double sum = sumsOfWeights[i];
-		entropies[i] = Math.Log( sum ) - sumsOfWeightLogWeights[i] / sum;
+		float sum = sumsOfWeights[i];
+		entropies[i] = (float)Math.Log( sum ) - sumsOfWeightLogWeights[i] / sum;
 
 		if( sumsOfOnes[i] > 1 )
 		{
@@ -282,27 +275,32 @@ abstract class Model
 
 	protected void Unban( int i, int t, int[] oldComp )
 	{
+		Console.WriteLine( $"Unban" );
+
 		wave[i][t] = true;
 
 		compatible[i][t] = oldComp;
 
 		stacksize--;
 
-		sumsOfOnes[i] += 1;
 		sumsOfWeights[i] += weights[t];
 		sumsOfWeightLogWeights[i] += weightLogWeights[t];
 
-		double sum = sumsOfWeights[i];
-		entropies[i] = Math.Log( sum ) - sumsOfWeightLogWeights[i] / sum;
+		float sum = sumsOfWeights[i];
+		entropies[i] = (float)Math.Log( sum ) - sumsOfWeightLogWeights[i] / sum;
 
 		if( sumsOfOnes[i] > 1 )
 		{
 			m_pq.UpdatePriority( m_nodes[i], (float)entropies[i] );
 		}
 		else
-		{ 
+		{
+			m_nodes[i].removed = false;
 			m_pq.Enqueue( m_nodes[i], (float)entropies[i] );
 		}
+
+		sumsOfOnes[i] += 1;
+
 
 	}
 

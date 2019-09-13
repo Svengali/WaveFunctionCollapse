@@ -122,7 +122,7 @@ class OverlappingModel : Model
 		T = weights.Count;
 		this.ground = (ground + T) % T;
 		patterns = new byte[T][];
-		base.weights = new double[T];
+		base.weights = new float[T];
 
 		int counter = 0;
 		foreach (long w in ordering)

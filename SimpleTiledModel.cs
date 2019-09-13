@@ -48,7 +48,7 @@ class SimpleTiledModel : Model
 
 		tiles = new List<Color[]>();
 		tilenames = new List<string>();
-		var tempStationary = new List<double>();
+		var tempStationary = new List<float>();
 
 		List<int[]> action = new List<int[]>();
 		Dictionary<string, int> firstOccurrence = new Dictionary<string, int>();
@@ -57,6 +57,10 @@ class SimpleTiledModel : Model
 		{
 			string tilename = xtile.Get<string>("name");
 			if (subset != null && !subset.Contains(tilename)) continue;
+
+			string style = xtile.Get<string>("style");
+
+			bool isRoot = style == "root";
 
 			Func<int, int> a, b;
 			int cardinality;
@@ -225,20 +229,20 @@ class SimpleTiledModel : Model
 				{
 					bool[] a = wave[x + y * FMX];
 					int amount = (from b in a where b select 1).Sum();
-					double lambda = 1.0 / (from t in Enumerable.Range(0, T) where a[t] select weights[t]).Sum();
+					float lambda = 1.0f / (from t in Enumerable.Range(0, T) where a[t] select weights[t]).Sum();
 
 					for (int yt = 0; yt < tilesize; yt++) for (int xt = 0; xt < tilesize; xt++)
 						{
 							if (black && amount == T) bitmapData[x * tilesize + xt + (y * tilesize + yt) * FMX * tilesize] = unchecked((int)0xff000000);
 							else
 							{
-								double r = 0, g = 0, b = 0;
+								float r = 0, g = 0, b = 0;
 								for (int t = 0; t < T; t++) if (a[t])
 									{
 										Color c = tiles[t][xt + yt * tilesize];
-										r += (double)c.R * weights[t] * lambda;
-										g += (double)c.G * weights[t] * lambda;
-										b += (double)c.B * weights[t] * lambda;
+										r += (float)c.R * weights[t] * lambda;
+										g += (float)c.G * weights[t] * lambda;
+										b += (float)c.B * weights[t] * lambda;
 									}
 
 								bitmapData[x * tilesize + xt + (y * tilesize + yt) * FMX * tilesize] =

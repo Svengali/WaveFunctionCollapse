@@ -13,13 +13,13 @@ using System.Collections.Generic;
 
 static class Stuff
 {
-	public static int Random(this double[] a, double r)
+	public static int Random(this float[] a, float r)
 	{
-		double sum = a.Sum();
+		float sum = a.Sum();
 		for (int j = 0; j < a.Length; j++) a[j] /= sum;
 
 		int i = 0;
-		double x = 0;
+		float x = 0;
 
 		while (i < a.Length)
 		{
